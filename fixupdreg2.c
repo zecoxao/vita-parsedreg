@@ -88,15 +88,15 @@ void walk_fatents(void)
 int main(void)
 {
 	FILE *f=fopen("system.dreg","r");
-	fread(d,131072,1,f);
+	fread(d,0x80000,1,f);
 	fclose(f);
 	f=fopen("system.ireg","r");
-	fseek(f,0x5C,SEEK_SET);
-	fread(a,256*58,1,f);
+	fseek(f,0xBC,SEEK_SET);
+	fread(a,0x100*0xF0,1,f);
 	fclose(f);
 	walk_fatents();
 	f=fopen("system.dreg","w");
-	fwrite(d,131072,1,f);
+	fwrite(d,0x80000,1,f);
 	fclose(f);
 	return 0;
 }
