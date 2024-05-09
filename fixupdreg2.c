@@ -48,7 +48,7 @@ void fixcheck(uchar *block, int len)
 	memcpy(block+14, res, 4);
 }
 
-unsigned char d[131072];
+unsigned char d[0x80000];
 struct {
 	short _0;
 	short _1;
@@ -60,7 +60,7 @@ struct {
 	char name[28];
 	short _4;
 	short fat[7];
-} a[256];
+} a[0x400];
 
 void walk_fatents(void)
 {
@@ -92,7 +92,7 @@ int main(void)
 	fclose(f);
 	f=fopen("system.ireg","r");
 	fseek(f,0xBC,SEEK_SET);
-	fread(a,0x100*0xF0,1,f);
+	fread(a,0x400*0x3C,1,f);
 	fclose(f);
 	walk_fatents();
 	f=fopen("system.dreg","w");
