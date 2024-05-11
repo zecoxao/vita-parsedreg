@@ -98,8 +98,8 @@ struct {
 	short nblk;
 	char name[28];
 	short _4;
-	short fat[7];
-} a[0x400];
+	short fat[8];
+} a[0x1000];
 
 void parse_subdir(int i, short *f, ent *hdr)
 {
@@ -177,7 +177,7 @@ void walk_fatents(void)
 {
 	int i,j;
 	uchar *buf;
-	for(i=0;i<256;i++)
+	for(i=0;i<1256;i++)
 		if(a[i].nblk) {
 			ent *e=calloc(sizeof(ent),1);
 			e->type=ET_HEADER;
@@ -258,7 +258,7 @@ void dump_xml(void)
 	ent *i;
 	printf("<?xml version=\"1.0\"?>\n");
 	printf("<?xml-stylesheet type=\"text/xml\" href=\"pspreghtmlizer.xsl\"?>\n");
-	printf("<registry format=\"psp\">\n");
+	printf("<registry format=\"psp2\">\n");
 	for(i=hdrlist;i;i=i->header.nextheader)
 		if(!i->header.parent)
 			dump_header(i,1);
@@ -272,7 +272,7 @@ int main(void)
 	fclose(f);
 	f=fopen("system.ireg","r");
 	fseek(f,0xBC,SEEK_SET);
-	fread(a,0x400*0x3C,1,f);
+	fread(a,1092*0x3C,1,f);
 	fclose(f);
 	walk_fatents();
 	resolve_refs();
