@@ -98,8 +98,20 @@ struct {
 	short nblk;
 	char name[28];
 	short _4;
+	short fat[7];
+} a[256];
+struct {
+	short _0;
+	short _1;
+	short parent;
+	short _2;
+	short _3;
+	short nent;
+	short nblk;
+	char name[28];
+	short _4;
 	short fat[8];
-} a[0x1000];
+} b[4096];
 
 void parse_subdir(int i, short *f, ent *hdr)
 {
@@ -173,27 +185,29 @@ void parse(int i, short *f, ent *hdr)
 	}
 }
 
-void walk_fatents(void)
+void walk_fatents(char type)
 {
 	int i,j;
 	uchar *buf;
-	for(i=0;i<1256;i++)
-		if(a[i].nblk) {
+        int num = (type == 0 ? 256 : 1256);
+	for(i=0;i<num;i++) {
+                int nblocks = type ? b[i].nblk : a[i].nblk;
+		if (nblocks) {
 			ent *e=calloc(sizeof(ent),1);
 			e->type=ET_HEADER;
-			e->name=strdup(a[i].name);
+			e->name=strdup(type ? b[i].name : a[i].name);
 			e->header.idx=i;
-			e->header.paridx=a[i].parent;
-			e->header.kids=calloc(sizeof(ent *),a[i].nent);
+			e->header.paridx=(type ? b[i].parent : a[i].parent);
+			e->header.kids=calloc(sizeof(ent *), (type ? b[i].nent : a[i].nent));
 
 			/* reassemble segments
 			   it can be done better in-place
 			   bleh i don't care foo */
-			buf=malloc(a[i].nblk*512);
-			for(j=0;j<a[i].nblk;j++)
-				memcpy(buf+512*j,d+512*a[i].fat[j],512);
+			buf=malloc((type ? b[i].nblk*512 : a[i].nblk*512));
+			for(j=0;j<nblocks;j++)
+				memcpy(buf+512*j,d+512* (type ? b[i].fat[j] : a[i].fat[j]),512);
 			free(buf);
-			if(checkcheck(buf,a[i].nblk*512))
+			if(checkcheck(buf, nblocks*512))
 				fprintf(stderr,"PASS 0x%02X '%s'\n",i,e->name);
 			else {
 				fprintf(stderr,"FAIL 0x%02X '%s'\n",i,e->name);
@@ -201,13 +215,14 @@ void walk_fatents(void)
 			}
 
 			/* walk the walk */
-			for(j=0;j<=a[i].nent;j++)
-				parse(32*(j&15)+512*a[i].fat[j>>4],a[i].fat,e);
+			for(j=0;j<= (type ? b[i].nent : a[i].nent);j++)
+				parse(32*(j&15)+512* (type ? b[i].fat[j>>4] : a[i].fat[j>>4]), type ? b[i].fat : a[i].fat,e);
 			addheader(e);
 		}
+        }
 }
 
-void resolve_refs(void)
+void resolve_refs()
 {
 	ent *i,*f;
 	int j;
@@ -253,29 +268,47 @@ void dump_header(ent *h,int d)
 	printf("%s</dir>\n",s);
 }
 
-void dump_xml(void)
+void dump_xml(char type)
 {
 	ent *i;
 	printf("<?xml version=\"1.0\"?>\n");
 	printf("<?xml-stylesheet type=\"text/xml\" href=\"pspreghtmlizer.xsl\"?>\n");
-	printf("<registry format=\"psp2\">\n");
+	printf("<registry format=\"%s\">\n", type == 0 ? "psp" : "psp2");
 	for(i=hdrlist;i;i=i->header.nextheader)
 		if(!i->header.parent)
 			dump_header(i,1);
 	printf("</registry>\n");
 }
 
-int main(void)
+int main(int argc, char ** argp)
 {
-	FILE *f=fopen("system.dreg","r");
-	fread(d,0x80000,1,f);
+        char * sys_dreg = "system.dreg";
+        char * sys_ireg = "system.ireg";
+        if (argc == 3)
+        {
+                sys_dreg = argp[1];
+                sys_ireg = argp[2];
+        }
+        
+	FILE *f=fopen(sys_dreg,"r");
+	fseek(f, 0, SEEK_END);
+	long int size = ftell(f);
+	fseek(f, 0, SEEK_SET);
+	fread(d, size, 1, f);
 	fclose(f);
-	f=fopen("system.ireg","r");
-	fseek(f,0xBC,SEEK_SET);
-	fread(a,1092*0x3C,1,f);
+        
+        char type = size == 0x80000 ? 1 : 0;
+
+	f=fopen(sys_ireg,"r");
+	fseek(f, (type ? 0xBC : 0x5C), SEEK_SET);
+        if (type)
+                fread(b, 1092 * 60, 1, f);
+        else
+                fread(a, 256 * 58, 1, f);
 	fclose(f);
-	walk_fatents();
+
+	walk_fatents(type);
 	resolve_refs();
-	dump_xml();
+	dump_xml(type);
 	return 0;
 }
