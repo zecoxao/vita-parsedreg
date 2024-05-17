@@ -88,29 +88,28 @@ int checkcheck(uchar *block, int len)
 }
 
 unsigned char d[0x80000];
-struct {
-	short _0;
-	short _1;
+/* https://github.com/zecoxao/vita-parsedreg/issues/1*/
+struct category_t {
+	int system_magic;  /* opend registry struct address in memory */
 	short parent;
-	short _2;
-	short _3;
+	short hash_id; /* (hash%total_categories) */
+	short hash;
 	short nent;
 	short nblk;
 	char name[28];
-	short _4;
-	short fat[7];
+	short unused;
+	unsigned short fat[7];
 } a[256];
-struct {
-	short _0;
-	short _1;
+struct category_v2_t {
+	int system_magic;  /* opend registry struct address in memory */
 	short parent;
-	short _2;
-	short _3;
+	short hash_id; /* (hash%total_categories) */
+	short hash;
 	short nent;
 	short nblk;
 	char name[28];
-	short _4;
-	short fat[8];
+	short unused;
+	unsigned short fat[8];
 } b[4096];
 
 void parse_subdir(int i, short *f, ent *hdr)
